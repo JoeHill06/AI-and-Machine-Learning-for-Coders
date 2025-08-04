@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion MNIST Drawing Predictor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .drawing-section {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .canvas-container {
+            flex: 1;
+        }
+        
+        .canvas-wrapper {
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            display: inline-block;
+            background: black;
+        }
+        
+        #canvas {
+            display: block;
+            cursor: crosshair;
+            border-radius: 7px;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .control-group {
+            margin: 10px 0;
+        }
+        
+        label {
+            display: inline-block;
+            width: 100px;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            margin: 0 10px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .results-section {
+            flex: 1;
+            min-height: 400px;
+        }
+        
+        .results-container {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            background: #f9f9f9;
+            min-height: 350px;
+        }
+        
+        .prediction-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .prediction-rank {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .prediction-class {
+            font-size: 16px;
+            margin: 5px 0;
+            text-transform: capitalize;
+        }
+        
+        .confidence-bar {
+            background: #eee;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .interpretation {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+        }
+        
+        .brush-preview {
+            display: inline-block;
+            background: #333;
+            border-radius: 50%;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Fashion MNIST Drawing Predictor</h1>
+        <p class="subtitle">Draw a fashion item and let AI guess what it is!</p>
+        
+        <div class="drawing-section">
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas" width="280" height="280"></canvas>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="brushSize">Brush Size:</label>
+                        <input type="range" id="brushSize" min="5" max="30" value="15">
+                        <span id="brushValue">15</span>px
+                        <div class="brush-preview" id="brushPreview"></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <button onclick="clearCanvas()">🗑️ Clear</button>
+                        <button onclick="predict()">🎯 Predict</button>
+                        <button onclick="saveDrawing()">💾 Save</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="results-section">
+                <div class="results-container">
+                    <h3>🔮 Prediction Results</h3>
+                    <div id="results">
+                        <p style="text-align: center; color: #666; margin-top: 50px;">
+                            👈 Draw something on the canvas and click "Predict" to see the magic!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const brushSizeSlider = document.getElementById('brushSize');
+        const brushValue = document.getElementById('brushValue');
+        const brushPreview = document.getElementById('brushPreview');
+        
+        let isDrawing = false;
+        let brushSize = 15;
+        
+        // Set up canvas
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'white';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Update brush size
+        brushSizeSlider.addEventListener('input', function() {
+            brushSize = this.value;
+            brushValue.textContent = brushSize;
+            updateBrushPreview();
+        });
+        
+        function updateBrushPreview() {
+            const size = Math.max(8, brushSize / 2);
+            brushPreview.style.width = size + 'px';
+            brushPreview.style.height = size + 'px';
+        }
+        updateBrushPreview();
+        
+        // Drawing events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            ctx.lineWidth = brushSize;
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        
+        function stopDrawing() {
+            isDrawing = false;
+        }
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+        
+        function clearCanvas() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('results').innerHTML = `
+                <p style="text-align: center; color: #666; margin-top: 50px;">
+                    👈 Draw something on the canvas and click "Predict" to see the magic!
+                </p>
+            `;
+        }
+        
+        function predict() {
+            const imageData = canvas.toDataURL('image/png');
+            
+            document.getElementById('results').innerHTML = `
+                <div class="loading">
+                    <p>🤖 Analyzing your drawing...</p>
+                </div>
+            `;
+            
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({image: imageData})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                displayResults(data.results);
+            })
+            .catch(error => {
+                document.getElementById('results').innerHTML = `
+                    <div class="error">
+                        <strong>❌ Error:</strong> ${error.message}
+                    </div>
+                `;
+            });
+        }
+        
+        function displayResults(results) {
+            let html = '';
+            
+            results.forEach((result, index) => {
+                const emoji = result.confidence > 50 ? '🎯' : 
+                             result.confidence > 30 ? '👍' : 
+                             result.confidence > 15 ? '🤔' : '❓';
+                
+                html += `
+                    <div class="prediction-item">
+                        <div class="prediction-rank">${emoji} #${index + 1}</div>
+                        <div class="prediction-class">${result.class}</div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${result.confidence}%">
+                                ${result.confidence.toFixed(1)}%
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Add interpretation
+            const best = results[0];
+            let interpretation;
+            if (best.confidence > 70) {
+                interpretation = `🎉 I'm very confident this is a ${best.class}!`;
+            } else if (best.confidence > 40) {
+                interpretation = `🤖 I think this is probably a ${best.class}`;
+            } else if (best.confidence > 20) {
+                interpretation = `🤷 My best guess is ${best.class}, but I'm not very sure`;
+            } else {
+                interpretation = `😅 I'm having trouble recognizing this drawing`;
+            }
+            
+            html += `
+                <div class="interpretation">
+                    <strong>💭 Interpretation:</strong><br>
+                    ${interpretation}<br><br>
+                    <strong>💡 Tip:</strong> Try drawing clearer shapes for better results!
+                </div>
+            `;
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function saveDrawing() {
+            const link = document.createElement('a');
+            link.download = `fashion_drawing_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
